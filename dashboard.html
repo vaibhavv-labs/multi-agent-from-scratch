@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Arena</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+body[data-theme=dark]{--bg:#0b0a09;--glass:rgba(24,21,18,.74);--card:rgba(14,12,10,.72);--line:rgba(232,200,140,.16);--text:#f3ece0;--dim:#a39a8a;--on:#17120b;--vig:rgba(0,0,0,.82);--fin:#7fd39a;--finbg:rgba(24,58,38,.85);
+--btn:linear-gradient(135deg,#ecc97f,#c9954a);--btnc:#17120b;--glowbtn:rgba(230,191,115,.4);--k:#e6bf73;--s:#9ad9c0;--n:#f2866b}
+body[data-theme=beige]{--bg:#e9dfcd;--glass:rgba(250,245,234,.8);--card:rgba(255,251,242,.75);--line:rgba(60,45,25,.16);--text:#2a2118;--dim:#7a6c58;--on:#fbf6ea;--vig:rgba(130,105,70,.28);--fin:#4f8a4f;--finbg:rgba(220,236,210,.92);
+--btn:#2a2118;--btnc:#f6eddb;--glowbtn:rgba(42,33,24,.25);--k:#8a5a12;--s:#2a7f6a;--n:#b5472f}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{display:flex;background:var(--bg);color:var(--text);font:15px/1.4 "Manrope",system-ui,sans-serif;overflow:hidden;transition:background .5s,color .5s}
+#main{flex:1;position:relative;min-width:0}
+#stage{position:absolute;inset:0}
+#stage canvas{display:block}
+#stage:after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,var(--vig))}
+.css{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.err{padding:40px;color:#c0392b}
+#hud{position:absolute;left:24px;top:20px;right:24px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;z-index:5;pointer-events:none}
+h1{margin:0;font:600 32px "Fraunces",Georgia,serif;letter-spacing:-.01em}
+#hud p{margin:2px 0 0;color:var(--dim)}
+.btns{display:flex;gap:10px}
+button{pointer-events:auto;cursor:pointer;border:0;color:var(--btnc);font:700 15px "Manrope",sans-serif;padding:12px 22px;border-radius:12px;background:var(--btn);box-shadow:0 0 26px var(--glowbtn);transition:transform .15s}
+button.ghost{background:var(--glass);color:var(--text);border:1px solid var(--line);box-shadow:none;backdrop-filter:blur(8px)}
+button:hover:not(:disabled){transform:translateY(-2px)}
+button:disabled{opacity:.45;cursor:default;box-shadow:none}
+button:focus-visible{outline:2px solid var(--text);outline-offset:3px}
+#steps{position:absolute;left:24px;right:24px;bottom:18px;display:flex;gap:8px;flex-wrap:wrap;z-index:5}
+.step{padding:6px 12px;border-radius:99px;font-size:13px;color:var(--dim);background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(8px);transition:.3s}
+.step.done{color:var(--on);background:var(--c);border-color:transparent;box-shadow:0 0 14px -2px var(--c)}
+#hint{position:absolute;right:24px;bottom:22px;color:var(--dim);font-size:12px;z-index:5}
+.tag{text-align:center;padding:6px 14px;border-radius:12px;background:var(--glass);border:1px solid var(--c);box-shadow:0 0 18px -6px var(--c);backdrop-filter:blur(6px);transform:translateY(-6px)}
+.tag b{display:block;color:var(--c);font:600 16px "Fraunces",Georgia,serif}
+.tag i{display:block;height:15px;font-size:12px;color:var(--text);font-style:normal;opacity:.85;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{font:600 12px "JetBrains Mono",monospace;padding:3px 10px;border-radius:99px;background:var(--c);color:var(--on);box-shadow:0 0 14px -2px var(--c)}
+#panel{width:410px;display:flex;flex-direction:column;background:var(--glass);border-left:1px solid var(--line);backdrop-filter:blur(16px);z-index:6}
+#panel h2{margin:0;padding:18px 18px 10px;font:600 18px "Fraunces",Georgia,serif;color:var(--dim)}
+#log{flex:1;overflow-y:auto;padding:0 14px 16px;display:flex;flex-direction:column;gap:10px}
+.card{border:1px solid var(--line);border-left:4px solid var(--c);border-radius:10px;padding:10px 12px;background:var(--card);animation:in .35s ease-out}
+@keyframes in{from{opacity:0;transform:translateX(24px)}}
+.card .top{display:flex;justify-content:space-between;align-items:center;font-weight:700}
+.card .top em{font:600 11px "JetBrains Mono",monospace;font-style:normal;background:var(--c);color:var(--on);border-radius:99px;padding:2px 9px}
+pre{margin:8px 0 0;white-space:pre-wrap;word-break:break-word;font:12px/1.5 "JetBrains Mono",monospace;color:var(--text)}
+.k{color:var(--k)}.s{color:var(--s)}.n{color:var(--n)}
+.final{--c:var(--fin);border-color:var(--fin);background:var(--finbg);box-shadow:0 0 30px -6px var(--fin)}
+.final .post{margin-top:8px;font-size:15px;line-height:1.5;white-space:pre-wrap}
+@media(max-width:900px){body{flex-direction:column;overflow:auto}#main{height:70vh;flex:none}#panel{width:auto;height:50vh}}
+@media(prefers-reduced-motion:reduce){.card{animation:none}}
+</style></head><body data-theme="dark">
+<div id="main">
+  <div id="stage"></div>
+  <div id="hud"><div><h1>Agent Arena</h1><p>Four agents, one message bus, live</p></div><div class="btns"><button id="theme" class="ghost">Beige theme</button><button id="run">Run agents</button></div></div>
+  <div id="steps"></div><div id="hint">drag to orbit, scroll to zoom</div>
+</div>
+<aside id="panel"><h2>Message log</h2><div id="log"></div></aside>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script>
+const $=s=>document.querySelector(s), stage=$('#stage'), logEl=$('#log'), btn=$('#run'), stepsEl=$('#steps');
+if(!window.THREE){stage.innerHTML='<p class="err">3D libraries load nahi hui. Internet check karo (three.js CDN se aati hai).</p>';throw new Error('no THREE')}
+const T=THREE, W=()=>stage.clientWidth, H=()=>stage.clientHeight;
+const TH={
+dark:{bg:0x0b0a09,fog:.016,amb:[0xffe8c8,.5],sun:[0xfff1dc,.75],grid:[0x3a3326,0x1b1812],gridOp:.55,star:[0xe8d9b8,.8,.3],body:0x1c1a17,metal:.8,rough:.28,visor:0x050505,
+ bloom:[.9,.55,.3],gk:1,lk:1,add:true,edge:0x6b6455,hot:0xfff1d6,env:0xffffff,finC:0x7fd39a,col:{orchestrator:0xe6bf73,researcher:0x4fd1b0,writer:0xf2866b,reviewer:0xe8a0b8}},
+beige:{bg:0xe9dfcd,fog:.012,amb:[0xfff6e6,1.0],sun:[0xffffff,.9],grid:[0xc9b999,0xd8cab0],gridOp:.7,star:[0xa89572,.55,.22],body:0xf6f0e3,metal:.15,rough:.55,visor:0x2a2118,
+ bloom:[.12,.3,.9],gk:.6,lk:.4,add:false,edge:0xa89a82,hot:0x2a2118,env:0xfffaf0,finC:0x4f8a4f,col:{orchestrator:0xa8741a,researcher:0x2a7f78,writer:0x8a4b6b,reviewer:0x5f7a2e}}};
+let th=TH.dark,COL=th.col,cur='dark';
+const BL=()=>th.add?T.AdditiveBlending:T.NormalBlending;
+const POS={orchestrator:[0,1.8,-3.5],researcher:[-6.2,0,0],writer:[6.2,0,0],reviewer:[0,0,4.6]};
+const EDGES=[['orchestrator','researcher'],['orchestrator','writer'],['writer','reviewer'],['reviewer','orchestrator']];
+const STEPS=['task','facts','brief','draft v1','feedback','draft v2','approved'];
+const hex=c=>'#'+new T.Color(c).getHexString();
+
+/* renderer, scene, camera */
+const renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(W(),H()); stage.appendChild(renderer.domElement);
+const css=new T.CSS2DRenderer(); css.setSize(W(),H()); css.domElement.className='css'; stage.appendChild(css.domElement);
+const scene=new T.Scene(); scene.background=new T.Color(0); scene.fog=new T.FogExp2(0,.018);
+const cam=new T.PerspectiveCamera(45,W()/H(),.1,300); cam.position.set(0,6.5,17);
+let controls=null;
+if(T.OrbitControls){controls=new T.OrbitControls(cam,renderer.domElement);controls.target.set(0,1.3,0);controls.enableDamping=true;
+  controls.autoRotate=true;controls.autoRotateSpeed=.5;controls.minDistance=9;controls.maxDistance=30;controls.maxPolarAngle=Math.PI*.49;
+  controls.addEventListener('start',()=>controls.autoRotate=false);}
+let composer=null,bloom=null;
+if(T.EffectComposer&&T.UnrealBloomPass){composer=new T.EffectComposer(renderer);composer.addPass(new T.RenderPass(scene,cam));
+  bloom=new T.UnrealBloomPass(new T.Vector2(W(),H()),1.0,.6,.28);composer.addPass(bloom);}
+
+/* lights, floor, stars */
+const amb=new T.AmbientLight(0xffffff,.5);scene.add(amb);
+const sun=new T.DirectionalLight(0xffffff,.7); sun.position.set(6,12,8); scene.add(sun);
+let grid=null;
+const sp=new Float32Array(2400);
+for(let i=0;i<800;i++){const r=50+Math.random()*60,a=Math.random()*6.283,b=Math.acos(Math.random()*1.6-.8);
+  sp[i*3]=r*Math.sin(b)*Math.cos(a);sp[i*3+1]=Math.abs(r*Math.cos(b))*.8+4;sp[i*3+2]=r*Math.sin(b)*Math.sin(a)}
+const sg=new T.BufferGeometry(); sg.setAttribute('position',new T.BufferAttribute(sp,3));
+const stars=new T.Points(sg,new T.PointsMaterial({color:0x9fb2ff,size:.35,transparent:true,opacity:.85})); scene.add(stars);
+
+/* robots */
+const agents={}; let ai=0;
+function makeAgent(name){
+  const c=new T.Color(COL[name]), g=new T.Group(), rig=new T.Group(); g.position.set(...POS[name]); g.add(rig);
+  const dark=new T.MeshStandardMaterial({color:th.body,metalness:th.metal,roughness:th.rough});
+  const glow=k=>new T.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:k*th.gk});
+  const add=(geo,mat,x,y,z,p=rig)=>{const m=new T.Mesh(geo,mat);m.position.set(x,y,z);p.add(m);return m};
+  add(new T.CylinderGeometry(1.5,1.7,.25,48),dark,0,0,0,g);
+  const ring=add(new T.TorusGeometry(1.6,.05,12,64),glow(2.2),0,.14,0,g); ring.rotation.x=Math.PI/2;
+  add(new T.CylinderGeometry(.6,.8,1.2,32),dark,0,.95,0);
+  add(new T.SphereGeometry(.2,16,16),glow(2.6),0,1.1,.7);
+  const head=add(new T.SphereGeometry(.62,32,32),dark,0,2.2,0); head.scale.set(1,.85,.9);
+  const hg=new T.Group(); hg.position.y=2.2; rig.add(hg); rig.remove(head); hg.add(head); head.position.set(0,0,0);
+  add(new T.BoxGeometry(.95,.34,.3),new T.MeshStandardMaterial({color:th.visor,metalness:.9,roughness:.1}),0,0,.5,hg);
+  const eye=new T.MeshStandardMaterial({color:0xffffff,emissive:c,emissiveIntensity:1.6});
+  add(new T.SphereGeometry(.09,16,16),eye,-.2,0,.66,hg); add(new T.SphereGeometry(.09,16,16),eye,.2,0,.66,hg);
+  add(new T.CylinderGeometry(.03,.03,.5,8),dark,0,.85,0,hg); add(new T.SphereGeometry(.1,16,16),glow(3),0,1.15,0,hg);
+  [-1,1].forEach(s=>{add(new T.SphereGeometry(.22,20,20),dark,s*1.0,1.2,0); add(new T.TorusGeometry(.26,.03,8,24),glow(2),s*1.0,1.2,0)});
+  const props=new T.Group(); rig.add(props);
+  if(name==='orchestrator'){[1.1,1.45].forEach((r,i)=>{const t=add(new T.TorusGeometry(r,.03,10,64),glow(2.4),0,3.9,0,props);t.rotation.x=Math.PI/2+i*.5})}
+  if(name==='researcher'){props.position.set(1.7,1.7,.5);add(new T.TorusGeometry(.4,.07,12,40),glow(2),0,0,0,props);
+    add(new T.CircleGeometry(.37,32),new T.MeshBasicMaterial({color:c,transparent:true,opacity:.18,side:T.DoubleSide}),0,0,0,props);
+    const h=add(new T.CylinderGeometry(.06,.06,.6,8),dark,-.38,-.38,0,props);h.rotation.z=.78}
+  if(name==='writer'){props.position.set(1.7,1.7,.4);
+    add(new T.PlaneGeometry(.85,1.1),new T.MeshStandardMaterial({color:0xeef1ff,emissive:0x2a2f55,side:T.DoubleSide}),0,0,0,props);
+    for(let i=0;i<4;i++)add(new T.BoxGeometry(.6,.04,.02),glow(1.8),0,.3-i*.2,.02,props);
+    const pen=add(new T.CylinderGeometry(.04,.04,.7,8),glow(2),.55,-.3,.1,props);pen.rotation.z=.6}
+  if(name==='reviewer'){props.position.set(1.7,1.7,.4);add(new T.TorusGeometry(.55,.05,12,48),glow(2),0,0,0,props);
+    const a=add(new T.BoxGeometry(.12,.35,.08),glow(3),-.14,-.08,0,props);a.rotation.z=.8;
+    const b=add(new T.BoxGeometry(.12,.7,.08),glow(3),.14,.04,0,props);b.rotation.z=-.7}
+  const orbit=new T.Group(); orbit.position.y=2.2; rig.add(orbit);
+  for(let i=0;i<6;i++){const m=add(new T.SphereGeometry(.07,8,8),glow(3),Math.cos(i*1.047)*1.05,Math.sin(i*2)*.15,Math.sin(i*1.047)*1.05,orbit)}
+  orbit.visible=false;
+  const light=new T.PointLight(c,1.2,10); light.position.set(0,2.4,1.5); g.add(light);
+  const el=document.createElement('div'); el.className='tag'; el.style.setProperty('--c',hex(c));
+  el.innerHTML=`<b>${name[0].toUpperCase()+name.slice(1)}</b><i></i>`;
+  const tag=new T.CSS2DObject(el); tag.position.set(0,4.7,0); g.add(tag);
+  scene.add(g);
+  return agents[name]={name,g,rig,hg,eye,orbit,light,props,el,i:ai++,think:false,pulse:0,flash:0,color:c};
+}
+function buildAgents(){
+  const prev={...agents}; ai=0;
+  for(const n in prev){scene.remove(prev[n].g);prev[n].el.remove()}
+  Object.keys(COL).forEach(n=>{makeAgent(n);const p=prev[n];if(p){agents[n].think=p.think;status(agents[n],p.el.querySelector('i').textContent)}});
+}
+const status=(a,t)=>a.el.querySelector('i').textContent=t||'';
+
+/* edges */
+let edges={},edgeLines=[];
+function buildEdges(){edgeLines.forEach(l=>scene.remove(l));edges={};edgeLines=[];
+EDGES.forEach(([a,b])=>{
+  const pts=curve(a,b).getPoints(48), geo=new T.BufferGeometry().setFromPoints(pts);
+  const mat=new T.LineDashedMaterial({color:th.edge,dashSize:.35,gapSize:.25,transparent:true,opacity:.3});
+  const l=new T.Line(geo,mat); l.computeLineDistances(); scene.add(l);edgeLines.push(l); edges[a+b]=edges[b+a]={mat,f:0};
+});}
+function chest(a){return a.g.position.clone().add(new T.Vector3(0,1.4,0))}
+function curve(an,bn){const a=chest(agents[an]),b=chest(agents[bn]),m=a.clone().add(b).multiplyScalar(.5);m.y+=2.4;return new T.QuadraticBezierCurve3(a,m,b)}
+
+/* messages in flight, shockwaves */
+const msgs=[], shocks=[], N=36;
+function shock(a,color){
+  const m=new T.Mesh(new T.RingGeometry(.9,1.05,64),new T.MeshBasicMaterial({color,transparent:true,side:T.DoubleSide,blending:BL(),depthWrite:false}));
+  m.rotation.x=-Math.PI/2; m.position.copy(a.g.position); m.position.y+=.25; scene.add(m); shocks.push({m,t0:performance.now()});
+}
+function send(e){
+  const A=agents[e.sender],B=agents[e.to]; if(!A||!B)return;
+  const col=A.color, grp=new T.Group();
+  const body=new T.Mesh(new T.BoxGeometry(.75,.5,.1),new T.MeshStandardMaterial({color:th.env,emissive:col,emissiveIntensity:2.2*th.gk}));
+  grp.add(body);
+  const fl=new T.Mesh(new T.PlaneGeometry(.5,.02),new T.MeshBasicMaterial({color:0x111111}));fl.position.set(0,.05,.06);grp.add(fl);
+  const el=document.createElement('div');el.className='chip';el.style.setProperty('--c',hex(col));el.textContent=e.type;
+  const lab=new T.CSS2DObject(el);lab.position.set(0,.7,0);grp.add(lab);
+  const tg=new T.BufferGeometry(),tp=new Float32Array(N*3),tc=new Float32Array(N*3);
+  for(let i=0;i<N;i++){const k=Math.pow(1-i/N,2);const cc=th.add?col.clone().multiplyScalar(k):new T.Color(th.bg).lerp(col,k);tc[i*3]=cc.r;tc[i*3+1]=cc.g;tc[i*3+2]=cc.b}
+  tg.setAttribute('position',new T.BufferAttribute(tp,3));tg.setAttribute('color',new T.BufferAttribute(tc,3));
+  const trail=new T.Points(tg,new T.PointsMaterial({size:.5,vertexColors:true,transparent:true,blending:BL(),depthWrite:false}));
+  trail.frustumCulled=false; scene.add(grp,trail);
+  const ed=edges[e.sender+e.to]; if(ed)ed.f=1;
+  A.pulse=.6; A.flash=.6;
+  msgs.push({grp,trail,tp,hist:[],curve:curve(e.sender,e.to),t0:performance.now(),dur:1300,B,el});
+}
+function finish(m){
+  scene.remove(m.grp,m.trail); m.el.remove(); m.B.pulse=1; m.B.flash=1; shock(m.B,m.B.color);
+}
+
+/* animation */
+const clock=new T.Clock(), ease=u=>u<.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+function tick(){
+  requestAnimationFrame(tick);
+  const dt=Math.min(clock.getDelta(),.05), t=clock.elapsedTime, now=performance.now();
+  for(const a of Object.values(agents)){
+    a.rig.position.y=Math.sin(t*1.4+a.i*1.7)*.09;
+    a.rig.scale.setScalar(1+.16*a.pulse); a.pulse=Math.max(0,a.pulse-dt*2.2);
+    a.flash=Math.max(0,a.flash-dt*1.8);
+    a.hg.rotation.y=Math.sin(t*.7+a.i)*.28;
+    a.eye.emissiveIntensity=(a.think?2.4+Math.sin(t*12)*1.3:1.6+a.flash*3)*th.gk;
+    a.light.intensity=(1.2+(a.think?1+Math.sin(t*8)*.5:0)+a.flash*2.5)*th.lk;
+    a.orbit.visible=a.think; a.orbit.rotation.y=t*3.2;
+    a.props.rotation.y=a.name==='orchestrator'?t*.8:Math.sin(t*1.1+a.i)*.35;
+    a.props.position.y+=0; if(a.name!=='orchestrator')a.props.position.y=1.7+Math.sin(t*2+a.i)*.12;
+    if(a.name==='orchestrator')a.props.children.forEach((r,i)=>r.rotation.z=t*(i?-1:1)*1.2);
+  }
+  for(const e of new Set(Object.values(edges))){e.f=Math.max(0,e.f-dt*.8);e.mat.opacity=.28+.7*e.f;e.mat.color.setHex(e.f>.05?th.hot:th.edge)}
+  for(let i=msgs.length-1;i>=0;i--){
+    const m=msgs[i],u=(now-m.t0)/m.dur;
+    if(u>=1){finish(m);msgs.splice(i,1);continue}
+    const p=m.curve.getPoint(ease(u)); m.grp.position.copy(p);
+    m.grp.rotation.set(Math.sin(t*6)*.3,t*4,0); m.hist.unshift(p.clone()); if(m.hist.length>N)m.hist.pop();
+    m.hist.forEach((v,k)=>{m.tp[k*3]=v.x;m.tp[k*3+1]=v.y;m.tp[k*3+2]=v.z}); m.trail.geometry.attributes.position.needsUpdate=true;
+    m.trail.geometry.setDrawRange(0,m.hist.length);
+  }
+  for(let i=shocks.length-1;i>=0;i--){
+    const s=shocks[i],u=(now-s.t0)/1000;
+    if(u>=1){scene.remove(s.m);shocks.splice(i,1);continue}
+    s.m.scale.setScalar(1+u*2.6); s.m.material.opacity=1-u;
+  }
+  stars.rotation.y+=dt*.01;
+  if(controls)controls.update();
+  composer?composer.render():renderer.render(scene,cam);
+  css.render(scene,cam);
+}
+tick();
+function applyTheme(n){
+  cur=n;th=TH[n];COL=th.col;document.body.dataset.theme=n;$('#theme').textContent=n==='dark'?'Beige theme':'Dark theme';
+  scene.background.setHex(th.bg);scene.fog.color.setHex(th.bg);scene.fog.density=th.fog;
+  amb.color.setHex(th.amb[0]);amb.intensity=th.amb[1];sun.color.setHex(th.sun[0]);sun.intensity=th.sun[1];
+  if(grid){scene.remove(grid);grid.geometry.dispose()}
+  grid=new T.GridHelper(70,70,th.grid[0],th.grid[1]);grid.position.y=-.3;grid.material.transparent=true;grid.material.opacity=th.gridOp;scene.add(grid);
+  stars.material.color.setHex(th.star[0]);stars.material.opacity=th.star[1];stars.material.size=th.star[2];
+  if(bloom){bloom.strength=th.bloom[0];bloom.radius=th.bloom[1];bloom.threshold=th.bloom[2]}
+  msgs.splice(0).forEach(m=>{scene.remove(m.grp,m.trail);m.el.remove()});
+  buildAgents();buildEdges();
+  try{localStorage.setItem('theme',n)}catch(e){}
+}
+function resize(){renderer.setSize(W(),H());css.setSize(W(),H());composer&&composer.setSize(W(),H());cam.aspect=W()/H();cam.updateProjectionMatrix()}
+new ResizeObserver(resize).observe(stage);
+
+/* HUD + log */
+let stepN=0;
+function renderSteps(){stepsEl.innerHTML=STEPS.map((s,i)=>`<span class="step" id="st${i}">${s}</span>`).join('')}
+renderSteps();
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const hl=j=>esc(JSON.stringify(j,null,2)).replace(/("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|-?\d+\.?\d*/g,
+  (m,s,k)=>s?`<span class="${k?'k':'s'}">${s}</span>${k||''}`:`<span class="n">${m}</span>`);
+function card(e){
+  const c=document.createElement('div');c.className='card';c.style.setProperty('--c',hex(COL[e.sender]||0x888888));
+  c.innerHTML=`<div class="top"><span>${e.sender} → ${e.to}</span><em>${e.type}</em></div><pre>${hl(e.content)}</pre>`;
+  logEl.appendChild(c);logEl.scrollTop=logEl.scrollHeight;
+  const s=$('#st'+stepN++);if(s){s.classList.add('done');s.style.setProperty('--c',hex(COL[e.sender]))}
+}
+function final(e){
+  const c=document.createElement('div');c.className='card final';
+  c.innerHTML='<div class="top"><span>Final post</span><em style="background:var(--fin)">approved</em></div><div class="post"></div>';
+  logEl.appendChild(c);const p=c.querySelector('.post');let i=0;
+  const iv=setInterval(()=>{p.textContent=e.post.slice(0,++i);logEl.scrollTop=logEl.scrollHeight;if(i>=e.post.length)clearInterval(iv)},18);
+  const o=agents.orchestrator;[0,250,500].forEach(d=>setTimeout(()=>shock(o,th.finC),d));o.flash=1.5;o.pulse=1;
+  btn.disabled=false;
+}
+function reset(){
+  logEl.innerHTML='';stepN=0;renderSteps();btn.disabled=true;
+  msgs.splice(0).forEach(m=>{scene.remove(m.grp,m.trail);m.el.remove()});
+  Object.values(agents).forEach(a=>{a.think=false;status(a,'')});
+}
+function onEvent(e){
+  const a=agents[e.agent];
+  if(e.kind==='reset')reset();
+  else if(e.kind==='thinking'&&a){a.think=true;status(a,e.text||'thinking...')}
+  else if(e.kind==='idle'&&a){a.think=false;status(a,'')}
+  else if(e.kind==='message'){send(e);card(e)}
+  else if(e.kind==='final')final(e);
+}
+new EventSource('/events').onmessage=ev=>onEvent(JSON.parse(ev.data));
+$('#theme').onclick=()=>applyTheme(cur==='dark'?'beige':'dark');
+addEventListener('keydown',e=>{if(e.key==='t'||e.key==='T')$('#theme').click()});
+let saved='dark';try{saved=localStorage.getItem('theme')||'dark'}catch(e){}
+applyTheme(TH[saved]?saved:'dark');
+btn.onclick=()=>{btn.disabled=true;fetch('/run',{method:'POST'}).then(r=>{if(!r.ok)btn.disabled=false})};
+</script></body></html>
