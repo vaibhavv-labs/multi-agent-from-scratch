@@ -1,4 +1,4 @@
-# Agents Talking
+# multi-agent-from-scratch
 
 A live, visual demo showing how AI agents communicate with each other, built from scratch in plain Python with zero dependencies and a real-time 3D dashboard.
 
